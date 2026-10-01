@@ -1,0 +1,6 @@
+{
+  "name": "BHARAT — Build the Civilization",
+  "description": "An interactive civilization-building educational game exploring Indian history, culture, and progress from early settlements to historical eras.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
