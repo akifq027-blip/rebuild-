@@ -128,10 +128,15 @@ export const Discovery3DModal: React.FC<Discovery3DModalProps> = ({
         {/* Structured Educational Sections */}
         <div className="space-y-3.5 text-xs leading-relaxed text-stone-300">
           {/* 1. What You Discovered */}
-          <div className="bg-stone-950/70 border border-stone-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
-              <Compass className="w-3.5 h-3.5" />
-              <span>What You Discovered</span>
+          <div className="bg-stone-950/70 border border-stone-800 rounded-xl p-3.5 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                <Compass className="w-3.5 h-3.5" />
+                <span>What You Discovered</span>
+              </div>
+              <span className="text-[10px] text-amber-300/80 bg-amber-950/50 border border-amber-800/40 px-2 py-0.5 rounded font-mono">
+                Educational interpretation
+              </span>
             </div>
             <p className="text-stone-200 text-sm leading-relaxed">
               {discovery.whatYouDiscovered || discovery.significance}
@@ -139,10 +144,15 @@ export const Discovery3DModal: React.FC<Discovery3DModalProps> = ({
           </div>
 
           {/* 2. Historical Context */}
-          <div className="bg-stone-950/70 border border-stone-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center gap-2 text-sky-400 font-bold text-xs uppercase tracking-wider">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Historical & Archaeological Context</span>
+          <div className="bg-stone-950/70 border border-stone-800 rounded-xl p-3.5 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sky-400 font-bold text-xs uppercase tracking-wider">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Historical Context</span>
+              </div>
+              <span className="text-[10px] text-sky-300/80 bg-sky-950/50 border border-sky-800/40 px-2 py-0.5 rounded font-mono">
+                Historical reference
+              </span>
             </div>
             <p className="text-stone-300 text-xs sm:text-sm leading-relaxed">
               {discovery.historicalContext}
@@ -150,10 +160,15 @@ export const Discovery3DModal: React.FC<Discovery3DModalProps> = ({
           </div>
 
           {/* 3. Gameplay Connection */}
-          <div className="bg-stone-950/70 border border-stone-800 rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
-              <Layers className="w-3.5 h-3.5" />
-              <span>Gameplay Connection</span>
+          <div className="bg-stone-950/70 border border-stone-800 rounded-xl p-3.5 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                <Layers className="w-3.5 h-3.5" />
+                <span>Gameplay Connection</span>
+              </div>
+              <span className="text-[10px] text-emerald-300/80 bg-emerald-950/50 border border-emerald-800/40 px-2 py-0.5 rounded font-mono">
+                Gameplay representation
+              </span>
             </div>
             <p className="text-stone-300 text-xs sm:text-sm leading-relaxed">
               {discovery.gameplayConnection ||
@@ -164,10 +179,15 @@ export const Discovery3DModal: React.FC<Discovery3DModalProps> = ({
           {/* 4. Academic Source / Reference */}
           <div className="bg-stone-900/90 border border-stone-800 rounded-xl p-3 flex items-start gap-2.5 text-stone-400">
             <ExternalLink className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <span className="font-semibold text-stone-300 block text-[11px]">
-                Academic Reference & Verification:
-              </span>
+            <div className="space-y-0.5 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-stone-300 block text-[11px]">
+                  Source / Reference:
+                </span>
+                <span className="text-[10px] text-stone-400 bg-stone-800 px-1.5 py-0.5 rounded font-mono">
+                  Verified Archaeological Evidence
+                </span>
+              </div>
               <p className="text-[11px] text-amber-300/90 font-mono">
                 {discovery.academicSource}
               </p>

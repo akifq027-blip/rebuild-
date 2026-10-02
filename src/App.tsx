@@ -29,6 +29,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AuthModal } from './components/auth/AuthModal';
 import { StartScreen } from './pages/StartScreen';
 import { GameScreen } from './pages/GameScreen';
+import { UNITS_CATALOG } from './game/armyData';
 import api from './services/api';
 
 /**
@@ -195,7 +196,7 @@ function BharatGame() {
     return INITIAL_GAME_STATE;
   });
 
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<GameTab>('HOME');
   const [nodeCooldowns, setNodeCooldowns] = useState<Record<string, number>>({});
   const [exploreCooldowns, setExploreCooldowns] = useState<Record<string, number>>({});
@@ -522,12 +523,14 @@ function BharatGame() {
 
       const updatedMissions = evaluateMissions(prev.missions, {
         gatheredWoodTotal: newTotals.wood,
+        gatheredStoneTotal: newTotals.stone,
         hutCount,
         farmCount,
         wellCount,
         workshopCount,
         population: prev.civilization.population,
         unlockedTechIds: unlockedIds,
+        discoveriesCount: (prev.discoveries || []).filter((d) => d.discovered).length,
       });
 
       return {
@@ -605,12 +608,14 @@ function BharatGame() {
       const unlockedIds = new Set(prev.technologies.filter((t) => t.unlocked).map((t) => t.id));
       const updatedMissions = evaluateMissions(prev.missions, {
         gatheredWoodTotal: prev.gatheredTotals.wood,
+        gatheredStoneTotal: prev.gatheredTotals.stone,
         hutCount,
         farmCount,
         wellCount,
         workshopCount,
         population: prev.civilization.population,
         unlockedTechIds: unlockedIds,
+        discoveriesCount: (prev.discoveries || []).filter((d) => d.discovered).length,
       });
 
       const currentEraTitle = prev.historicalEras.find((e) => e.id === prev.activeEraId)?.title || 'Early Settlements';
@@ -792,6 +797,24 @@ function BharatGame() {
         ...prev.journalEntries,
       ];
 
+      const unlockedIds = new Set(prev.technologies.filter((t) => t.unlocked).map((t) => t.id));
+      const hutCount = prev.buildings.find((b) => b.id === 'hut')?.currentCount || 0;
+      const farmCount = prev.buildings.find((b) => b.id === 'farm')?.currentCount || 0;
+      const wellCount = prev.buildings.find((b) => b.id === 'well')?.currentCount || 0;
+      const workshopCount = prev.buildings.find((b) => b.id === 'workshop')?.currentCount || 0;
+
+      const updatedMissions = evaluateMissions(prev.missions, {
+        gatheredWoodTotal: prev.gatheredTotals.wood,
+        gatheredStoneTotal: prev.gatheredTotals.stone,
+        hutCount,
+        farmCount,
+        wellCount,
+        workshopCount,
+        population: prev.civilization.population,
+        unlockedTechIds: unlockedIds,
+        discoveriesCount: updatedDiscoveries.filter((d) => d.discovered).length,
+      });
+
       addToast(`DISCOVERY UNLOCKED! +${rewardKnowledge} Knowledge · +${rewardCulture} Culture`, 'success');
 
       return {
@@ -799,6 +822,8 @@ function BharatGame() {
         resources: newResources,
         resourceList: syncResourceList(newResources),
         discoveries: updatedDiscoveries,
+        missions: updatedMissions,
+        currentObjective: getActiveObjective(updatedMissions),
         civilization: {
           ...prev.civilization,
           xp,
@@ -925,6 +950,73 @@ function BharatGame() {
         resources: updatedRes,
         resourceList: syncResourceList(updatedRes),
         storedProduction: { food: 0, water: 0, knowledge: 0 },
+      };
+    });
+  };
+
+  // 4.5 Train Military Units Handler (Akhada)
+  const handleTrainUnits = (unitId: string, count: number) => {
+    const unit = UNITS_CATALOG[unitId];
+    if (!unit) return;
+
+    const totalFoodCost = (unit.cost.food || 0) * count;
+    const totalWoodCost = (unit.cost.wood || 0) * count;
+    const totalStoneCost = (unit.cost.stone || 0) * count;
+
+    if (
+      gameState.resources.food < totalFoodCost ||
+      gameState.resources.wood < totalWoodCost ||
+      gameState.resources.stone < totalStoneCost
+    ) {
+      addToast('Not enough resources to train this regiment!', 'warning');
+      return;
+    }
+
+    setGameState((prev) => {
+      const newResources = {
+        ...prev.resources,
+        food: Math.max(0, prev.resources.food - totalFoodCost),
+        wood: Math.max(0, prev.resources.wood - totalWoodCost),
+        stone: Math.max(0, prev.resources.stone - totalStoneCost),
+      };
+
+      const existingArmy = prev.army || [
+        { unitId: 'padati', count: 4 },
+        { unitId: 'dhanurdhara', count: 0 },
+        { unitId: 'ashvarohi', count: 0 },
+        { unitId: 'gajarohi', count: 0 },
+      ];
+
+      const updatedArmy = existingArmy.map((a) => {
+        if (a.unitId === unitId) {
+          return { ...a, count: a.count + count };
+        }
+        return a;
+      });
+
+      if (!existingArmy.some((a) => a.unitId === unitId)) {
+        updatedArmy.push({ unitId, count });
+      }
+
+      const { xp, level, xpToNextLevel } = awardXp(
+        prev.civilization.xp,
+        prev.civilization.level,
+        15 * count
+      );
+
+      addToast(`+${count} ${unit.name} (${unit.sanskritName}) recruited to the Garrison!`, 'success');
+
+      return {
+        ...prev,
+        resources: newResources,
+        resourceList: syncResourceList(newResources),
+        army: updatedArmy,
+        civilization: {
+          ...prev.civilization,
+          xp,
+          level,
+          xpToNextLevel,
+        },
       };
     });
   };
@@ -1457,6 +1549,7 @@ function BharatGame() {
           onSelectEra={handleSelectEra}
           onCompleteChallenge={handleCompleteChallenge}
           onResolveEvent={handleResolveEvent}
+          onTrainUnits={handleTrainUnits}
         />
       )}
 

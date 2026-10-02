@@ -2,6 +2,38 @@ import { MissionItem, GameState } from '../types/game';
 
 export const INITIAL_MISSIONS: MissionItem[] = [
   {
+    id: 'm0_establish_settlement',
+    title: 'Establish the Settlement',
+    description: 'Gather 20 Wood, 10 Stone, and establish your early community living shelters.',
+    type: 'establish_settlement',
+    target: 3,
+    progress: 1, // Starts with 1 hut built
+    rewardText: '+20 Knowledge, +15 Culture, +40 XP',
+    rewardResource: {
+      resource: 'knowledge',
+      amount: 20,
+    },
+    rewardXp: 40,
+    completed: false,
+    claimed: false,
+  },
+  {
+    id: 'm0_explore_discover',
+    title: 'Explore and Discover',
+    description: 'Visit an ancient archaeological site in the 3D world, read historical context, and record a discovery.',
+    type: 'discoveries',
+    target: 1,
+    progress: 0,
+    rewardText: '+25 Knowledge, +20 Culture, +50 XP',
+    rewardResource: {
+      resource: 'culture',
+      amount: 20,
+    },
+    rewardXp: 50,
+    completed: false,
+    claimed: false,
+  },
+  {
     id: 'm1_gather_wood',
     title: 'Gather Wood for Settlement',
     description: 'Gather 30 timber from the sacred riverine grove to supply construction needs.',
@@ -122,18 +154,30 @@ export function evaluateMissions(
   missions: MissionItem[],
   state: {
     gatheredWoodTotal: number;
+    gatheredStoneTotal?: number;
     hutCount: number;
     farmCount: number;
     wellCount: number;
     workshopCount: number;
     population: number;
     unlockedTechIds: Set<string>;
+    discoveriesCount?: number;
   }
 ): MissionItem[] {
   return missions.map((mission) => {
     let currentProgress = mission.progress;
 
     switch (mission.type) {
+      case 'establish_settlement': {
+        const woodMet = state.gatheredWoodTotal >= 20 ? 1 : 0;
+        const stoneMet = (state.gatheredStoneTotal || 0) >= 10 ? 1 : 0;
+        const hutMet = state.hutCount >= 1 ? 1 : 0;
+        currentProgress = woodMet + stoneMet + hutMet;
+        break;
+      }
+      case 'discoveries':
+        currentProgress = Math.min(mission.target, state.discoveriesCount || 0);
+        break;
       case 'gather_wood':
         currentProgress = Math.min(mission.target, state.gatheredWoodTotal);
         break;

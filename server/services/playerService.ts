@@ -23,6 +23,7 @@ export interface SaveStatePayload {
     water?: number;
     wood?: number;
     stone?: number;
+    clay?: number;
     metal?: number;
     knowledge?: number;
     culture?: number;
@@ -31,13 +32,18 @@ export interface SaveStatePayload {
   storedProduction?: {
     food?: number;
     water?: number;
+    wood?: number;
+    stone?: number;
+    clay?: number;
     knowledge?: number;
   };
   activeEraId?: string;
   buildings?: Array<{ id: string; currentCount: number; status: string }>;
-  buildingSlots?: Array<{ id: number; buildingId: string | null; name: string }>;
+  buildingSlots?: Array<{ id: number; buildingId: string | null; name: string; level?: number; x?: number; y?: number }>;
   technologies?: Array<{ id: string; unlocked: boolean }>;
   missions?: Array<{ id: string; progress: number; target: number; completed: boolean; claimed: boolean }>;
+  army?: Array<{ id: string; name: string; count: number; tier: number }>;
+  onboardingStep?: number;
   artifacts?: Array<{ id: string; discovered: boolean; discoveredAt?: string }>;
   discoveries?: Array<{ id: string; discovered: boolean }>;
   completedChallengeIds?: string[];
@@ -47,8 +53,34 @@ export interface SaveStatePayload {
     stone?: number;
     food?: number;
     water?: number;
+    clay?: number;
   };
 }
+
+const VALID_BUILDING_IDS = new Set([
+  'civ_center',
+  'granary',
+  'timber_yard',
+  'stone_yard',
+  'clay_workshop',
+  'knowledge_center',
+  'training_ground',
+  'market',
+  'water_structure',
+  'craft_house',
+  // Backwards-compatible aliases
+  'hut',
+  'farm',
+  'well',
+  'storage',
+  'workshop',
+  'kiln',
+  'shrine',
+  'dock',
+  'council_hall',
+  'stepwell',
+  'academy',
+]);
 
 /**
  * Validate and sanitize player state to prevent corruption or unrealistic values
@@ -56,21 +88,83 @@ export interface SaveStatePayload {
 export function validateState(payload: SaveStatePayload): SaveStatePayload {
   const sanitized = { ...payload };
 
+  // 1. Resources validation & bounds checking
   if (sanitized.resources) {
-    sanitized.resources.food = Math.max(0, Math.min(100000, Number(sanitized.resources.food || 0)));
-    sanitized.resources.water = Math.max(0, Math.min(100000, Number(sanitized.resources.water || 0)));
-    sanitized.resources.wood = Math.max(0, Math.min(100000, Number(sanitized.resources.wood || 0)));
-    sanitized.resources.stone = Math.max(0, Math.min(100000, Number(sanitized.resources.stone || 0)));
-    sanitized.resources.metal = Math.max(0, Math.min(100000, Number(sanitized.resources.metal || 0)));
-    sanitized.resources.knowledge = Math.max(0, Math.min(100000, Number(sanitized.resources.knowledge || 0)));
-    sanitized.resources.culture = Math.max(0, Math.min(100000, Number(sanitized.resources.culture || 0)));
-    sanitized.resources.trade = Math.max(0, Math.min(100000, Number(sanitized.resources.trade || 0)));
+    sanitized.resources.food = Math.max(0, Math.min(1000000, Number(sanitized.resources.food || 0)));
+    sanitized.resources.water = Math.max(0, Math.min(1000000, Number(sanitized.resources.water || 0)));
+    sanitized.resources.wood = Math.max(0, Math.min(1000000, Number(sanitized.resources.wood || 0)));
+    sanitized.resources.stone = Math.max(0, Math.min(1000000, Number(sanitized.resources.stone || 0)));
+    sanitized.resources.clay = Math.max(0, Math.min(1000000, Number(sanitized.resources.clay || 0)));
+    sanitized.resources.metal = Math.max(0, Math.min(1000000, Number(sanitized.resources.metal || 0)));
+    sanitized.resources.knowledge = Math.max(0, Math.min(1000000, Number(sanitized.resources.knowledge || 0)));
+    sanitized.resources.culture = Math.max(0, Math.min(1000000, Number(sanitized.resources.culture || 0)));
+    sanitized.resources.trade = Math.max(0, Math.min(1000000, Number(sanitized.resources.trade || 0)));
   }
 
+  // 2. Civilization level & population validation
   if (sanitized.civilization) {
-    sanitized.civilization.population = Math.max(1, Math.min(10000, Number(sanitized.civilization.population || 1)));
-    sanitized.civilization.level = Math.max(1, Math.min(100, Number(sanitized.civilization.level || 1)));
-    sanitized.civilization.xp = Math.max(0, Number(sanitized.civilization.xp || 0));
+    sanitized.civilization.population = Math.max(1, Math.min(50000, Math.floor(Number(sanitized.civilization.population || 1))));
+    sanitized.civilization.level = Math.max(1, Math.min(100, Math.floor(Number(sanitized.civilization.level || 1))));
+    sanitized.civilization.xp = Math.max(0, Math.min(10000000, Number(sanitized.civilization.xp || 0)));
+    if (sanitized.civilization.name) {
+      sanitized.civilization.name = String(sanitized.civilization.name).slice(0, 50).trim();
+    }
+  }
+
+  // 3. Buildings validation (must match recognized structure identifiers)
+  if (Array.isArray(sanitized.buildings)) {
+    sanitized.buildings = sanitized.buildings
+      .filter((b) => b && typeof b.id === 'string' && VALID_BUILDING_IDS.has(b.id))
+      .map((b) => ({
+        id: b.id,
+        currentCount: Math.max(0, Math.min(50, Math.floor(Number(b.currentCount || 0)))),
+        status: b.status === 'AVAILABLE' || b.status === 'LOCKED' ? b.status : 'AVAILABLE',
+      }));
+  }
+
+  // 4. Building slots & building levels validation
+  if (Array.isArray(sanitized.buildingSlots)) {
+    sanitized.buildingSlots = sanitized.buildingSlots
+      .filter((s) => s && typeof s.id === 'number' && s.id >= 1 && s.id <= 50)
+      .map((s) => ({
+        id: s.id,
+        name: String(s.name || `Slot ${s.id}`).slice(0, 60),
+        buildingId: s.buildingId && VALID_BUILDING_IDS.has(s.buildingId) ? s.buildingId : null,
+        level: Math.max(1, Math.min(10, Math.floor(Number(s.level || 1)))),
+      }));
+  }
+
+  // 5. Discoveries validation
+  if (Array.isArray(sanitized.discoveries)) {
+    sanitized.discoveries = sanitized.discoveries
+      .filter((d) => d && typeof d.id === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(d.id))
+      .map((d) => ({
+        id: d.id,
+        discovered: Boolean(d.discovered),
+      }));
+  }
+
+  // 6. Technologies validation
+  if (Array.isArray(sanitized.technologies)) {
+    sanitized.technologies = sanitized.technologies
+      .filter((t) => t && typeof t.id === 'string' && /^[a-zA-Z0-9_-]{2,64}$/.test(t.id))
+      .map((t) => ({
+        id: t.id,
+        unlocked: Boolean(t.unlocked),
+      }));
+  }
+
+  // 7. Missions validation
+  if (Array.isArray(sanitized.missions)) {
+    sanitized.missions = sanitized.missions
+      .filter((m) => m && typeof m.id === 'string' && /^[a-zA-Z0-9_-]{2,64}$/.test(m.id))
+      .map((m) => ({
+        id: m.id,
+        progress: Math.max(0, Math.min(1000, Number(m.progress || 0))),
+        target: Math.max(1, Math.min(1000, Number(m.target || 1))),
+        completed: Boolean(m.completed),
+        claimed: Boolean(m.claimed),
+      }));
   }
 
   return sanitized;

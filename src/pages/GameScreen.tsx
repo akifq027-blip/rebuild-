@@ -38,6 +38,10 @@ import { FirstTimeTutorialModal } from '../components/common/FirstTimeTutorialMo
 import { AdminModal } from '../components/admin/AdminModal';
 import { EducationalNote } from '../components/common/EducationalNote';
 import { NotificationToast } from '../components/common/NotificationToast';
+import { OnboardingGuide } from '../components/onboarding/OnboardingGuide';
+import { StrategyNavigationDock } from '../components/navigation/StrategyNavigationDock';
+import { ArmyTrainingPanel } from '../components/panels/ArmyTrainingPanel';
+import { CoreResourceKey } from '../types/civilization';
 import { Target, ArrowRight, Award, Clock, Sparkles, BookOpen, AlertTriangle, Box, Layers } from 'lucide-react';
 
 interface GameScreenProps {
@@ -66,6 +70,7 @@ interface GameScreenProps {
   onCompleteChallenge: (challengeId: string, optionId: string, rewardKnow: number, rewardCult: number) => void;
   onResolveEvent: (eventId: string, optionId: string) => void;
   onResetDemo?: () => void;
+  onTrainUnits?: (unitId: string, count: number) => void;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -94,6 +99,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onCompleteChallenge,
   onResolveEvent,
   onResetDemo,
+  onTrainUnits,
 }) => {
   // Modals & Panels
   const [homeViewMode, setHomeViewMode] = useState<'3d' | '2d'>('3d');
@@ -112,6 +118,44 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [activeChallengeModal, setActiveChallengeModal] = useState<EraChallenge | null>(null);
   const [activeEventModal, setActiveEventModal] = useState<HistoricalEvent | null>(null);
   const [transitionEra, setTransitionEra] = useState<HistoricalEra | null>(null);
+
+  // 8-Step Interactive Onboarding State
+  const [onboardingStep, setOnboardingStep] = useState<number>(() => {
+    const saved = localStorage.getItem('bharat_onboarding_step');
+    return saved ? parseInt(saved, 10) : 1;
+  });
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
+    return localStorage.getItem('bharat_onboarding_dismissed') === 'true';
+  });
+
+  const handleAdvanceOnboarding = (targetTab?: string) => {
+    if (targetTab) {
+      if (targetTab === 'RESEARCH') onTabChange('TECHNOLOGY');
+      else onTabChange(targetTab as GameTab);
+    }
+    setOnboardingStep((prev) => {
+      const next = prev < 8 ? prev + 1 : 9;
+      localStorage.setItem('bharat_onboarding_step', next.toString());
+      return next;
+    });
+  };
+
+  const handleDismissOnboarding = () => {
+    setOnboardingDismissed(true);
+    localStorage.setItem('bharat_onboarding_dismissed', 'true');
+  };
+
+  // Safe army resources conversion
+  const armyResources: Record<CoreResourceKey, number> = {
+    food: gameState?.resources?.food || 0,
+    wood: gameState?.resources?.wood || 0,
+    stone: gameState?.resources?.stone || 0,
+    clay: (gameState?.resources as any)?.clay || gameState?.resources?.wood || 0,
+    knowledge: gameState?.resources?.knowledge || 0,
+  };
+
+  const trainingGroundLevel =
+    gameState?.buildings?.find((b) => b.id === 'training_ground' || b.id === 'workshop')?.currentCount || 1;
 
   // Safe array lookups with fallbacks
   const historicalEras = gameState?.historicalEras?.length ? gameState.historicalEras : HISTORICAL_ERAS;
@@ -160,7 +204,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-stone-950 text-stone-100 flex flex-col justify-between selection:bg-amber-800 selection:text-amber-100 relative">
+    <div className="min-h-screen w-full bg-stone-950 text-stone-100 flex flex-col justify-between selection:bg-amber-800 selection:text-amber-100 relative pb-28 sm:pb-32">
       {/* 1. Header (Brand, Era, Civ Profile, Level, XP, Timeline Button, Connection & Auth) */}
       <Header
         player={gameState.player}
@@ -179,6 +223,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         onOpenHowToPlay={() => setIsHowToPlayOpen(true)}
         onResetDemo={onResetDemo}
         onReturnToStart={onReturnToStart}
+        onSaveGame={onSaveCloudNow}
       />
 
       {/* 2. Resource Bar */}
@@ -199,6 +244,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         museumBadgeCount={undiscoveredArtifactsCount}
         onOpenTimeline={() => setIsTimelineOpen(true)}
         onOpenJournal={() => setIsJournalOpen(true)}
+      />
+
+      {/* 8-Step Interactive Visual Onboarding System */}
+      <OnboardingGuide
+        currentStepNumber={onboardingStep}
+        onboardingCompleted={onboardingStep > 8 || onboardingDismissed}
+        onActionClick={handleAdvanceOnboarding}
+        onDismissGuide={handleDismissOnboarding}
       />
 
       {/* Main Content Area */}
@@ -431,6 +484,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           />
         )}
 
+        {activeTab === 'ARMY' && (
+          <ArmyTrainingPanel
+            army={
+              gameState.army || [
+                { unitId: 'padati', count: 4 },
+                { unitId: 'dhanurdhara', count: 0 },
+                { unitId: 'ashvarohi', count: 0 },
+                { unitId: 'gajarohi', count: 0 },
+              ]
+            }
+            currentResources={armyResources}
+            trainingGroundLevel={trainingGroundLevel}
+            unlockedTechIds={unlockedTechIds}
+            onTrainUnits={onTrainUnits || (() => {})}
+          />
+        )}
+
         {activeTab === 'EXPLORE' && (
           <ExplorationPanel
             locations={INITIAL_EXPLORATION_LOCATIONS}
@@ -440,7 +510,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           />
         )}
 
-        {activeTab === 'TECHNOLOGY' && (
+        {(activeTab === 'TECHNOLOGY' || activeTab === 'RESEARCH') && (
           <TechnologyPanel
             technologies={gameState.technologies}
             availableKnowledge={gameState.resources.knowledge}
@@ -679,6 +749,29 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <NotificationToast
         notifications={notifications}
         onDismiss={onDismissNotification}
+      />
+
+      {/* Responsive Bottom Strategy Navigation Dock (HOME, BUILD, ARMY, MAP, RESEARCH) */}
+      <StrategyNavigationDock
+        activeTab={
+          activeTab === 'TECHNOLOGY' || activeTab === 'RESEARCH'
+            ? 'RESEARCH'
+            : activeTab === 'ARMY'
+            ? 'ARMY'
+            : activeTab === 'BUILD'
+            ? 'BUILD'
+            : activeTab === 'MAP'
+            ? 'MAP'
+            : 'HOME'
+        }
+        onTabChange={(tab) => {
+          if (tab === 'RESEARCH') onTabChange('TECHNOLOGY');
+          else onTabChange(tab as GameTab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        availableBuildCount={availableSlotsCount}
+        availableResearchCount={researchableTechCount}
+        unclaimedMissionsCount={unclaimedMissionsCount}
       />
     </div>
   );

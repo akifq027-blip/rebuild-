@@ -144,9 +144,20 @@ class ApiService {
     return this.request('/api/player/state');
   }
 
+  async getGameState() {
+    return this.request('/api/game/state');
+  }
+
   // 7. Game State: Save to Server
   async savePlayerState(state: any) {
     return this.request('/api/player/state', {
+      method: 'POST',
+      body: JSON.stringify(state),
+    });
+  }
+
+  async saveGameState(state: any) {
+    return this.request('/api/game/state', {
       method: 'POST',
       body: JSON.stringify(state),
     });

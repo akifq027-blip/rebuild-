@@ -500,7 +500,7 @@ export const Civilization3DCanvas: React.FC<Civilization3DCanvasProps> = ({
               BHARAT — BUILD THE CIVILIZATION
             </span>
             <h3 className="font-display font-bold text-2xl sm:text-3xl text-amber-100">
-              Loading Civilization Basin...
+              Loading Civilization...
             </h3>
             <p className="text-xs text-stone-400 italic max-w-sm mx-auto">
               Synthesizing river geography, alluvial groves, and archaeological discovery sites...
@@ -792,6 +792,16 @@ export const Civilization3DCanvas: React.FC<Civilization3DCanvasProps> = ({
         onBuild={onBuild}
         onUpgrade={(slotId) => {
           if (onUpgradeSlot) onUpgradeSlot(slotId);
+        }}
+        onNeedResourcesPrompt={(bName, missingStr) => {
+          setAcharyaTip({
+            text: `You need more resources for ${bName} (${missingStr}). Explore the river terrace and quarry!`,
+            actionText: 'Ask Acharya',
+            prompt: `Where should I harvest resources to construct ${bName}?`,
+          });
+          if (addToast) {
+            addToast(`Acharya: You need ${missingStr} to construct ${bName}.`, 'warning');
+          }
         }}
       />
 

@@ -144,4 +144,10 @@ export const INITIAL_GAME_STATE: GameState = {
   completedChallengeIds: [],
   achievements: INITIAL_ACHIEVEMENTS,
   isDemoMode: false,
+  army: [
+    { unitId: 'padati', count: 4 },
+    { unitId: 'dhanurdhara', count: 0 },
+    { unitId: 'ashvarohi', count: 0 },
+    { unitId: 'gajarohi', count: 0 },
+  ],
 };

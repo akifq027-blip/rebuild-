@@ -3,6 +3,7 @@ import { GameTab } from '../../types/game';
 import {
   Map,
   Hammer,
+  Shield,
   Compass,
   Cpu,
   Target,
@@ -49,6 +50,11 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
       id: 'BUILD',
       label: 'BUILD',
       icon: <Hammer className="w-4 h-4" />,
+    },
+    {
+      id: 'ARMY',
+      label: 'ARMY',
+      icon: <Shield className="w-4 h-4" />,
     },
     {
       id: 'EXPLORE',

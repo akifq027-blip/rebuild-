@@ -19,6 +19,7 @@ import {
   LogIn,
   ShieldCheck,
   Sparkles,
+  Save,
   HelpCircle,
 } from 'lucide-react';
 
@@ -39,6 +40,7 @@ interface HeaderProps {
   onOpenHowToPlay?: () => void;
   onResetDemo?: () => void;
   onReturnToStart?: () => void;
+  onSaveGame?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -57,6 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHowToPlay,
   onResetDemo,
   onReturnToStart,
+  onSaveGame,
 }) => {
   const { user, isAuthenticated, connectionStatus } = useAuth();
 
@@ -219,17 +222,33 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <ConnectionIndicator
               status={connectionStatus}
               userEmail={user?.email}
               onClick={isAuthenticated ? onOpenProfileModal : onOpenAuthModal}
             />
 
+            {/* Quick Save Button */}
+            <button
+              onClick={() => {
+                if (isAuthenticated && onSaveGame) {
+                  onSaveGame();
+                } else {
+                  onOpenAuthModal();
+                }
+              }}
+              className="flex items-center gap-1 text-[11px] text-amber-200 hover:text-amber-100 bg-amber-950/70 hover:bg-amber-900/80 border border-amber-700/60 px-2 py-1 rounded transition-colors cursor-pointer shadow-sm"
+              title={isAuthenticated ? 'Save civilization state to database' : 'Sign in to save progress to cloud database'}
+            >
+              <Save className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-semibold">{isAuthenticated ? 'Save' : 'Save Cloud'}</span>
+            </button>
+
             {isAuthenticated ? (
               <button
                 onClick={onOpenProfileModal}
-                className="flex items-center gap-1.5 text-[11px] text-amber-300 hover:text-amber-200 bg-stone-950/80 hover:bg-stone-900 border border-amber-800/50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                className="hidden sm:flex items-center gap-1.5 text-[11px] text-amber-300 hover:text-amber-200 bg-stone-950/80 hover:bg-stone-900 border border-amber-800/50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                 title="View Player Profile & Cloud Sync"
               >
                 <User className="w-3.5 h-3.5 text-amber-400" />
@@ -238,11 +257,11 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <button
                 onClick={onOpenAuthModal}
-                className="flex items-center gap-1.5 text-[11px] text-stone-950 bg-amber-500 hover:bg-amber-400 font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer shadow-sm"
+                className="hidden sm:flex items-center gap-1.5 text-[11px] text-stone-950 bg-amber-500 hover:bg-amber-400 font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer shadow-sm"
                 title="Create Account to save in Aiven Cloud"
               >
                 <LogIn className="w-3 h-3" />
-                <span>Sign In / Save</span>
+                <span>Sign In</span>
               </button>
             )}
           </div>

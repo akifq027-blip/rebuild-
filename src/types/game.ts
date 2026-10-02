@@ -10,6 +10,7 @@ import {
   HistoricalEvent,
   JournalEntry,
 } from './history';
+import { ArmyTroopGroup } from './civilization';
 
 export type ResourceKey =
   | 'food'
@@ -99,7 +100,16 @@ export interface MissionItem {
   id: string;
   title: string;
   description: string;
-  type: 'gather_wood' | 'build_hut' | 'build_farm' | 'build_well' | 'population' | 'tech_agriculture' | 'build_workshop';
+  type:
+    | 'gather_wood'
+    | 'build_hut'
+    | 'build_farm'
+    | 'build_well'
+    | 'population'
+    | 'tech_agriculture'
+    | 'build_workshop'
+    | 'establish_settlement'
+    | 'discoveries';
   target: number;
   progress: number;
   rewardText: string;
@@ -141,8 +151,10 @@ export interface ObjectiveItem {
 export type GameTab =
   | 'HOME'
   | 'BUILD'
+  | 'ARMY'
   | 'EXPLORE'
   | 'TECHNOLOGY'
+  | 'RESEARCH'
   | 'MISSIONS'
   | 'MUSEUM'
   | 'LEARN'
@@ -207,4 +219,5 @@ export interface GameState {
   // Part 5 Systems
   achievements: AchievementItem[];
   isDemoMode?: boolean;
+  army?: ArmyTroopGroup[];
 }

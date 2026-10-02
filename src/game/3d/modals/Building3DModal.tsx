@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BuildingItem, BuildingSlot, ResourceKey } from '../../../types/game';
 import { canAfford } from '../../economy';
 import {
@@ -24,6 +24,7 @@ interface Building3DModalProps {
   currentResources: Record<ResourceKey, number>;
   onBuild: (buildingId: string) => void;
   onUpgrade?: (slotId: number) => void;
+  onNeedResourcesPrompt?: (buildingName: string, missingStr: string) => void;
 }
 
 export const Building3DModal: React.FC<Building3DModalProps> = ({
@@ -35,7 +36,10 @@ export const Building3DModal: React.FC<Building3DModalProps> = ({
   currentResources,
   onBuild,
   onUpgrade,
+  onNeedResourcesPrompt,
 }) => {
+  const [selectedForAdvice, setSelectedForAdvice] = useState<string | null>(null);
+
   if (!isOpen || !slot) return null;
 
   const unlockedTechIds = new Set(technologies.filter((t) => t.unlocked).map((t) => t.id));
@@ -300,19 +304,58 @@ export const Building3DModal: React.FC<Building3DModalProps> = ({
                           Requires Technology: {b.requiredTech}
                         </span>
                       )}
+
+                      {/* Acharya Contextual Guidance Banner when resources are needed */}
+                      {selectedForAdvice === b.id && !affordable && (
+                        <div className="bg-amber-950/60 border border-amber-800/60 rounded-lg p-2.5 mt-2 space-y-1 text-left animate-fade-in">
+                          <div className="flex items-center gap-1.5 text-amber-300 font-bold text-[11px]">
+                            <span>🤖</span>
+                            <span>Acharya:</span>
+                          </div>
+                          <p className="text-[11px] text-amber-100/90 leading-relaxed">
+                            "You need more resources for this {b.name}. Explore the river terrace and gather{' '}
+                            {Object.entries(missing).map(([k, v]) => `${v} ${k.toUpperCase()}`).join(', ')}."
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    <button
-                      onClick={() => {
-                        onBuild(b.id);
-                        onClose();
-                      }}
-                      disabled={!isUnlocked || !affordable}
-                      className="mt-3 w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-30 disabled:cursor-not-allowed text-stone-950 font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <Hammer className="w-3.5 h-3.5" />
-                      <span>CONSTRUCT HERE</span>
-                    </button>
+                    {!isUnlocked ? (
+                      <button
+                        disabled
+                        className="mt-3 w-full py-2 px-3 bg-stone-800/60 opacity-50 cursor-not-allowed text-stone-400 font-bold text-xs rounded-lg flex items-center justify-center gap-1.5"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>LOCKED BY TECHNOLOGY</span>
+                      </button>
+                    ) : !affordable ? (
+                      <button
+                        onClick={() => {
+                          const missingStr = Object.entries(missing)
+                            .map(([k, v]) => `${v} ${k}`)
+                            .join(', ');
+                          setSelectedForAdvice(b.id);
+                          if (onNeedResourcesPrompt) {
+                            onNeedResourcesPrompt(b.name, missingStr);
+                          }
+                        }}
+                        className="mt-3 w-full py-2 px-3 bg-stone-850 hover:bg-stone-800 text-amber-400 border border-amber-700/60 font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>NEED RESOURCES (ASK ACHARYA)</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          onBuild(b.id);
+                          onClose();
+                        }}
+                        className="mt-3 w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 text-stone-950 font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+                      >
+                        <Hammer className="w-3.5 h-3.5 text-stone-950" />
+                        <span>CONSTRUCT HERE</span>
+                      </button>
+                    )}
                   </div>
                 );
               })}
