@@ -35,6 +35,7 @@ async function startServer() {
   app.use('/api/health', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/player', playerRoutes);
+  app.use('/api/game', playerRoutes);
   app.use('/api/ai', aiRoutes);
   app.use('/api/admin', adminRoutes);
 

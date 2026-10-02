@@ -98,7 +98,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-stone-900/90 border border-amber-700/50 shadow-md">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           <span className="text-[11px] uppercase tracking-widest text-amber-300 font-semibold">
-            Interactive Historical Civilization Simulation
+            Browser-Based 3D Civilization Educational Game
           </span>
         </div>
 
@@ -144,7 +144,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           </div>
 
           <div className="text-xs text-stone-300 leading-relaxed pt-2 border-t border-stone-800">
-            Start with an early settlement along sacred rivers. Build granaries and stepwells, research metallurgy, advance through 11 historical eras, consult your AI historical mentor Acharya, and save your civilization permanently to the cloud.
+            Explore a playable 3D ancient river basin with your pioneer avatar. Walk through the settlement, harvest Sal wood and quarry stone, construct and upgrade modular architecture, investigate archaeological discoveries, consult your AI mentor Acharya, and advance through historical eras.
           </div>
         </div>
 

@@ -81,6 +81,7 @@ export interface BuildingSlot {
   buildingId: string | null;
   x: number;
   y: number;
+  level?: number;
 }
 
 export interface TechnologyItem {

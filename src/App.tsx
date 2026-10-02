@@ -657,6 +657,159 @@ function BharatGame() {
     });
   };
 
+  // 2.5 Upgrade Structure Handler (3D Settlement)
+  const handleUpgradeSlot = (slotId: number) => {
+    const slot = gameState.buildingSlots.find((s) => s.id === slotId);
+    if (!slot || !slot.buildingId) return;
+
+    const building = gameState.buildings.find((b) => b.id === slot.buildingId);
+    if (!building) return;
+
+    const currentLevel = slot.level || 1;
+    if (currentLevel >= 3) {
+      addToast('Structure is already at maximum tier (Tier 3)!', 'info');
+      return;
+    }
+
+    const upgradeCost: Partial<Record<ResourceKey, number>> = Object.entries(building.cost).reduce(
+      (acc, [k, v]) => {
+        acc[k as ResourceKey] = Math.round((v || 0) * (currentLevel * 0.75 + 0.5));
+        return acc;
+      },
+      {} as Partial<Record<ResourceKey, number>>
+    );
+
+    const { affordable, missing } = canAfford(gameState.resources, upgradeCost);
+    if (!affordable) {
+      const missingStr = Object.entries(missing)
+        .map(([k, v]) => `${v} ${k}`)
+        .join(', ');
+      addToast(`Not enough resources to upgrade. Need ${missingStr}`, 'warning');
+      return;
+    }
+
+    setGameState((prev) => {
+      const newResources = deductResources(prev.resources, upgradeCost);
+      const nextLevel = currentLevel + 1;
+
+      const updatedSlots = prev.buildingSlots.map((s) => {
+        if (s.id === slotId) {
+          return { ...s, level: nextLevel };
+        }
+        return s;
+      });
+
+      let extraCap = 0;
+      let extraStorage = 0;
+      if (building.id === 'hut') extraCap = 2;
+      if (building.id === 'storage') extraStorage = 150;
+
+      const { xp, level, xpToNextLevel } = awardXp(
+        prev.civilization.xp,
+        prev.civilization.level,
+        35
+      );
+
+      const currentEraTitle =
+        prev.historicalEras.find((e) => e.id === prev.activeEraId)?.title || 'Early Settlements';
+
+      const newJournal = [
+        createJournalEntry(
+          `Upgraded ${building.name} to Tier ${nextLevel}`,
+          `Reinforced the ${building.name.toLowerCase()} foundation and masonry in Plot #${slotId}.`,
+          'era',
+          currentEraTitle
+        ),
+        ...prev.journalEntries,
+      ];
+
+      addToast(`STRUCTURE UPGRADED! ${building.name} reached Tier ${nextLevel}.`, 'success');
+
+      return {
+        ...prev,
+        resources: newResources,
+        resourceList: syncResourceList(newResources),
+        buildingSlots: updatedSlots,
+        civilization: {
+          ...prev.civilization,
+          populationCapacity: prev.civilization.populationCapacity + extraCap,
+          maxStorage: prev.civilization.maxStorage + extraStorage,
+          xp,
+          level,
+          xpToNextLevel,
+        },
+        journalEntries: newJournal,
+      };
+    });
+  };
+
+  // 2.6 3D Discovery Reward Handler
+  const handleDiscoveryReward = (rewardKnowledge: number, rewardCulture: number, discoveryId: string) => {
+    setGameState((prev) => {
+      const existingDisc = prev.discoveries.find((d) => d.id === discoveryId);
+      if (existingDisc && existingDisc.discovered) return prev;
+
+      const newKnowledge = (prev.resources.knowledge || 0) + rewardKnowledge;
+      const newCulture = (prev.resources.culture || 0) + rewardCulture;
+
+      const newResources = {
+        ...prev.resources,
+        knowledge: newKnowledge,
+        culture: newCulture,
+      };
+
+      const updatedDiscoveries = prev.discoveries.some((d) => d.id === discoveryId)
+        ? prev.discoveries.map((d) => (d.id === discoveryId ? { ...d, discovered: true } : d))
+        : [
+            ...prev.discoveries,
+            {
+              id: discoveryId,
+              title: discoveryId.replace('disc_', '').replace(/_/g, ' ').toUpperCase(),
+              description: 'Archaeological observation from the 3D civilization basin.',
+              rewardKnowledge,
+              rewardCulture,
+              discovered: true,
+              discoveredAt: new Date().toISOString(),
+            },
+          ];
+
+      const { xp, level, xpToNextLevel } = awardXp(
+        prev.civilization.xp,
+        prev.civilization.level,
+        25
+      );
+
+      const currentEraTitle =
+        prev.historicalEras.find((e) => e.id === prev.activeEraId)?.title || 'Early Settlements';
+
+      const newJournal = [
+        createJournalEntry(
+          '3D Discovery Recorded',
+          `Explorers investigated an ancient archaeological site in the river basin (+${rewardKnowledge} Knowledge).`,
+          'discovery',
+          currentEraTitle
+        ),
+        ...prev.journalEntries,
+      ];
+
+      addToast(`DISCOVERY UNLOCKED! +${rewardKnowledge} Knowledge · +${rewardCulture} Culture`, 'success');
+
+      return {
+        ...prev,
+        resources: newResources,
+        resourceList: syncResourceList(newResources),
+        discoveries: updatedDiscoveries,
+        civilization: {
+          ...prev.civilization,
+          xp,
+          level,
+          xpToNextLevel,
+        },
+        journalEntries: newJournal,
+      };
+    });
+  };
+
   // 3. Grow Community Handler
   const handleGrowCommunity = () => {
     if (
@@ -1285,6 +1438,9 @@ function BharatGame() {
           onReturnToStart={() => setIsPlaying(false)}
           onGatherResource={handleGatherResource}
           onBuild={handleBuild}
+          onUpgradeSlot={handleUpgradeSlot}
+          onDiscoveryReward={handleDiscoveryReward}
+          addToast={addToast}
           onResearch={handleResearch}
           onExploreLocation={handleExploreLocation}
           onClaimReward={handleClaimReward}

@@ -12,6 +12,7 @@ import { Header } from '../components/common/Header';
 import { ResourceBar } from '../components/common/ResourceBar';
 import { NavigationTabs } from '../components/navigation/NavigationTabs';
 import { CivilizationMap } from '../components/map/CivilizationMap';
+import { Civilization3DCanvas } from '../game/3d/Civilization3DCanvas';
 import { BuildingPanel } from '../components/buildings/BuildingPanel';
 import { MissionsPanel } from '../components/panels/MissionsPanel';
 import { TechnologyPanel } from '../components/panels/TechnologyPanel';
@@ -20,6 +21,7 @@ import { ArtifactMuseumPanel } from '../components/history/ArtifactMuseumPanel';
 import { LearnModePanel } from '../components/history/LearnModePanel';
 import { HistoricalSubcontinentMap } from '../components/map/HistoricalSubcontinentMap';
 import { JourneyTimelineModal } from '../components/history/JourneyTimelineModal';
+import { CivilizationProgressionModal } from '../components/history/CivilizationProgressionModal';
 import { EraTransitionModal } from '../components/history/EraTransitionModal';
 import { EraChallengeModal } from '../components/history/EraChallengeModal';
 import { HistoricalEventModal } from '../components/history/HistoricalEventModal';
@@ -36,7 +38,7 @@ import { FirstTimeTutorialModal } from '../components/common/FirstTimeTutorialMo
 import { AdminModal } from '../components/admin/AdminModal';
 import { EducationalNote } from '../components/common/EducationalNote';
 import { NotificationToast } from '../components/common/NotificationToast';
-import { Target, ArrowRight, Award, Clock, Sparkles, BookOpen, AlertTriangle } from 'lucide-react';
+import { Target, ArrowRight, Award, Clock, Sparkles, BookOpen, AlertTriangle, Box, Layers } from 'lucide-react';
 
 interface GameScreenProps {
   gameState: GameState;
@@ -45,6 +47,9 @@ interface GameScreenProps {
   onReturnToStart: () => void;
   onGatherResource: (type: 'wood' | 'stone' | 'food' | 'water') => void;
   onBuild: (buildingId: string) => void;
+  onUpgradeSlot?: (slotId: number) => void;
+  onDiscoveryReward?: (knowledge: number, culture: number, discoveryId: string) => void;
+  addToast?: (text: string, type?: 'success' | 'info' | 'warning' | 'level') => void;
   onResearch: (techId: string) => void;
   onExploreLocation: (locationId: string) => void;
   onClaimReward: (missionId: string) => void;
@@ -70,6 +75,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onReturnToStart,
   onGatherResource,
   onBuild,
+  onUpgradeSlot,
+  onDiscoveryReward,
+  addToast,
   onResearch,
   onExploreLocation,
   onClaimReward,
@@ -88,6 +96,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onResetDemo,
 }) => {
   // Modals & Panels
+  const [homeViewMode, setHomeViewMode] = useState<'3d' | '2d'>('3d');
+  const [isProgressionOpen, setIsProgressionOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -233,6 +243,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             )}
 
             <button
+              onClick={() => setIsProgressionOpen(true)}
+              className="px-3 py-2 bg-gradient-to-r from-amber-900/60 to-stone-900 hover:from-amber-800 text-amber-200 text-xs font-bold rounded-lg border border-amber-700/60 hover:border-amber-500 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="View Civilization Progression Tracker"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Civilization Progress</span>
+            </button>
+
+            <button
               onClick={handleTriggerEvent}
               className="px-3 py-2 bg-stone-800 hover:bg-stone-750 text-amber-300 text-xs font-semibold rounded-lg border border-stone-700 hover:border-amber-600 transition-colors cursor-pointer flex items-center gap-1.5"
             >
@@ -252,13 +271,71 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
         {/* Dynamic Tab Views */}
         {activeTab === 'HOME' && (
-          <div className="space-y-5">
-            <CivilizationMap
-              slots={gameState.buildingSlots}
-              buildings={gameState.buildings}
-              onGatherResource={onGatherResource}
-              nodeCooldowns={nodeCooldowns}
-            />
+          <div className="space-y-4">
+            {/* View Mode Switcher Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-stone-900/90 border border-stone-800 rounded-xl px-4 py-2.5 gap-2 shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-amber-500 uppercase tracking-widest bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/40">
+                  VIEWPORT
+                </span>
+                <span className="text-xs font-semibold text-stone-200">
+                  {homeViewMode === '3d'
+                    ? 'Playable 3D Civilization Basin · WASD / Arrows to Walk · E to Interact'
+                    : '2D Tactical Grid Overview & Resource Nodes'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 self-end sm:self-center bg-stone-950 p-1 rounded-lg border border-stone-800">
+                <button
+                  onClick={() => setHomeViewMode('3d')}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    homeViewMode === '3d'
+                      ? 'bg-amber-600 text-stone-950 shadow-md'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                  title="Switch to 3D World"
+                >
+                  <Box className="w-3.5 h-3.5" />
+                  <span>3D World</span>
+                </button>
+                <button
+                  onClick={() => setHomeViewMode('2d')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                    homeViewMode === '2d'
+                      ? 'bg-amber-600 text-stone-950 font-bold shadow-md'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                  title="Switch to 2D Grid"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>2D Grid</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3D World or 2D Tactical View */}
+            {homeViewMode === '3d' ? (
+              <Civilization3DCanvas
+                slots={gameState.buildingSlots}
+                buildings={gameState.buildings}
+                technologies={gameState.technologies}
+                currentResources={gameState.resources}
+                onGatherResource={onGatherResource}
+                onBuild={onBuild}
+                onUpgradeSlot={onUpgradeSlot}
+                onDiscoveryReward={onDiscoveryReward}
+                onOpenAcharyaFull={(q) => setIsAcharyaOpen(true)}
+                discoveredIds={(gameState.discoveries || []).filter((d) => d.discovered).map((d) => d.id)}
+                addToast={addToast}
+              />
+            ) : (
+              <CivilizationMap
+                slots={gameState.buildingSlots}
+                buildings={gameState.buildings}
+                onGatherResource={onGatherResource}
+                nodeCooldowns={nodeCooldowns}
+              />
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2">
@@ -515,6 +592,20 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         }}
         artifactsFoundCount={gameState.artifacts.filter((a) => a.discovered).length}
         totalArtifactsCount={gameState.artifacts.length}
+      />
+
+      <CivilizationProgressionModal
+        isOpen={isProgressionOpen}
+        onClose={() => setIsProgressionOpen(false)}
+        gameState={gameState}
+        onOpenTimeline={() => {
+          setIsProgressionOpen(false);
+          setIsTimelineOpen(true);
+        }}
+        onAdvanceEra={(eraId) => {
+          onSelectEra(eraId);
+          setIsProgressionOpen(false);
+        }}
       />
 
       <EraTransitionModal

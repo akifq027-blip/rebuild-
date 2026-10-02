@@ -42,8 +42,8 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({
   const tabs: TabItem[] = [
     {
       id: 'HOME',
-      label: 'HOME',
-      icon: <Map className="w-4 h-4" />,
+      label: '3D WORLD',
+      icon: <Globe className="w-4 h-4" />,
     },
     {
       id: 'BUILD',
